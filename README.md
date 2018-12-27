@@ -85,6 +85,12 @@ config :ueberauth, Ueberauth,
 
 To guard against client-side request modification, it's important to still check the domain in `info.urls[:website]` within the `Ueberauth.Auth` struct if you want to limit sign-in to a specific domain.
 
+## Credits
+
+Sponsored by [JetRockets](http://www.jetrockets.pro).
+
+![JetRockets](http://jetrockets.pro/jetrockets-white.png)
+
 ## License
 
 Please see [LICENSE](https://github.com/romul/ueberauth_yandex/blob/master/LICENSE) for licensing details.
