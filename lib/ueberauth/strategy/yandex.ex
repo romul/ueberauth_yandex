@@ -29,14 +29,24 @@ defmodule Ueberauth.Strategy.Yandex do
   end
 
   @doc """
+  Handles the callback from app with access_token.
+  """
+  def handle_callback!(%Plug.Conn{params: %{"access_token" => access_token}} = conn) do
+    token = OAuth2.AccessToken.new(access_token)
+    fetch_user(conn, token)
+  end
+
+  @doc """
   Handles the callback from Yandex.
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code}} = conn) do
     params = [code: code]
     opts = [redirect_uri: callback_url(conn)]
+
     case Ueberauth.Strategy.Yandex.OAuth.get_access_token(params, opts) do
       {:ok, token} ->
         fetch_user(conn, token)
+
       {:error, {error_code, error_description}} ->
         set_errors!(conn, [error(error_code, error_description)])
     end
@@ -70,9 +80,9 @@ defmodule Ueberauth.Strategy.Yandex do
   Includes the credentials from the yandex response.
   """
   def credentials(conn) do
-    token        = conn.private.access_token
-    scope_string = (token.other_params["scope"] || "")
-    scopes       = String.split(scope_string, ",")
+    token = conn.private.access_token
+    scope_string = token.other_params["scope"] || ""
+    scopes = String.split(scope_string, ",")
 
     %Credentials{
       expires: !!token.expires_at,
@@ -111,7 +121,6 @@ defmodule Ueberauth.Strategy.Yandex do
     }
   end
 
-
   defp fetch_user(conn, token) do
     conn = put_private(conn, :access_token, token)
     path = "https://login.yandex.ru/info?format=json"
@@ -120,10 +129,14 @@ defmodule Ueberauth.Strategy.Yandex do
     case resp do
       {:ok, %OAuth2.Response{status_code: 401, body: _body}} ->
         set_errors!(conn, [error("token", "unauthorized")])
-      {:ok, %OAuth2.Response{status_code: status_code, body: user}} when status_code in 200..399 ->
+
+      {:ok, %OAuth2.Response{status_code: status_code, body: user}}
+      when status_code in 200..399 ->
         put_private(conn, :yandex_user, user)
+
       {:error, %OAuth2.Response{status_code: status_code}} ->
         set_errors!(conn, [error("OAuth2", status_code)])
+
       {:error, %OAuth2.Error{reason: reason}} ->
         set_errors!(conn, [error("OAuth2", reason)])
     end
