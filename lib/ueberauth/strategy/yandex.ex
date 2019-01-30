@@ -130,9 +130,13 @@ defmodule Ueberauth.Strategy.Yandex do
       {:ok, %OAuth2.Response{status_code: 401, body: _body}} ->
         set_errors!(conn, [error("token", "unauthorized")])
 
-      {:ok, %OAuth2.Response{status_code: status_code, body: user}}
+      {:ok, %OAuth2.Response{status_code: status_code, body: user = %{"client_id" => client_id}}}
       when status_code in 200..399 ->
-        put_private(conn, :yandex_user, user)
+        if client_id != Ueberauth.Strategy.Yandex.OAuth.client().client_id do
+          set_errors!(conn, [error("OAuth2", "Wrong client_id")])
+        else
+          put_private(conn, :yandex_user, user)
+        end
 
       {:error, %OAuth2.Response{status_code: status_code}} ->
         set_errors!(conn, [error("OAuth2", status_code)])
