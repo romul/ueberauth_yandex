@@ -29,10 +29,16 @@ defmodule Ueberauth.Strategy.Yandex do
   end
 
   @doc """
+  Handles the callback from app with id_token (auth_token).
+  """
+  def handle_callback!(%Plug.Conn{params: %{"id_token" => auth_token}} = conn) do
+    fetch_user(conn, token)
+  end
+
+  @doc """
   Handles the callback from app with access_token.
   """
   def handle_callback!(%Plug.Conn{params: %{"access_token" => access_token}} = conn) do
-    token = OAuth2.AccessToken.new(access_token)
     fetch_user(conn, token)
   end
 
@@ -45,7 +51,7 @@ defmodule Ueberauth.Strategy.Yandex do
 
     case Ueberauth.Strategy.Yandex.OAuth.get_access_token(params, opts) do
       {:ok, token} ->
-        fetch_user(conn, token)
+        user_request(conn, token)
 
       {:error, {error_code, error_description}} ->
         set_errors!(conn, [error(error_code, error_description)])
@@ -122,6 +128,11 @@ defmodule Ueberauth.Strategy.Yandex do
   end
 
   defp fetch_user(conn, token) do
+    token = OAuth2.AccessToken.new(access_token)
+    user_request(conn, token)
+  end
+
+  defp user_request(conn, token) do
     conn = put_private(conn, :access_token, token)
     path = "https://login.yandex.ru/info?format=json"
     resp = Ueberauth.Strategy.Yandex.OAuth.get(token, path)
